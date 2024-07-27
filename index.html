@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<title>電磁波傳遞模擬</title>
+<style>
+    body { 
+        display: flex; 
+        justify-content: center; 
+        align-items: center; 
+        height: 100vh; 
+        margin: 0; 
+        background-color: #333; 
+        color: white; 
+        font-family: Arial, sans-serif;
+    }
+    canvas { 
+        border: 1px solid #ddd; 
+        background-color: #333;
+    }
+    #controlPanel {
+        position: absolute;
+        top: 20px;
+        left: 20px;
+    }
+    #info {
+        position: absolute;
+        left: 20px;
+        bottom: 20px;
+        font-size: 12px;
+    }
+    #controlPanel input, #controlPanel label {
+        color: white;
+        font-size: 16px;
+    }
+</style>
+</head>
+<body>
+<div id="controlPanel">
+    <label for="hopsInput">Hops:</label>
+    <input type="number" id="hopsInput" value="3" min="1" max="10" />
+</div>
+<canvas id="canvas"></canvas>
+<div id="info">
+    使用說明: 左鍵點擊創建節點或激活波動，右鍵點擊刪除節點。<br>
+    作者: Oliver | <a href="https://github.com/oliver0804" target="_blank">GitHub</a>
+</div>
+<script>
+    const canvas = document.getElementById('canvas');
+    const ctx = canvas.getContext('2d');
+    const hopsInput = document.getElementById('hopsInput');
+    canvas.width = window.innerWidth;
+    canvas.height = window.innerHeight;
+
+    let nodes = [];
+    let initialHops = parseInt(hopsInput.value); // 初始hops值
+
+    hopsInput.addEventListener('change', () => {
+        initialHops = Math.min(Math.max(parseInt(hopsInput.value), 1), 10);
+    });
+
+    canvas.addEventListener('click', function(e) {
+        if (e.button === 0) { // 左鍵點擊
+            const rect = canvas.getBoundingClientRect();
+            const x = e.clientX - rect.left;
+            const y = e.clientY - rect.top;
+            let found = false;
+            nodes.forEach(node => {
+                if (Math.sqrt((node.x - x) ** 2 + (node.y - y) ** 2) < 10) { // 10像素為點擊有效範圍
+                    found = true;
+                    activateNode(node); // 主動激活
+                }
+            });
+            if (!found) {
+                createNode(x, y, true);
+            }
+        }
+    });
+
+    canvas.addEventListener('contextmenu', function(e) {
+        e.preventDefault(); // 防止右鍵菜單彈出
+        const rect = canvas.getBoundingClientRect();
+        const x = e.clientX - rect.left;
+        const y = e.clientY - rect.top;
+        nodes = nodes.filter(node => Math.sqrt((node.x - x) ** 2 + (node.y - y) ** 2) >= 10); // 刪除節點
+    });
+
+    function createNode(x, y, isPrimary) {
+        let node = {
+            x,
+            y,
+            maxRadius: 200,  // 最大半徑調整為200像素
+            speed: 2,         // 擴散速度
+            waves: []
+        };
+        if (isPrimary) {
+            node.waves.push({radius: 0, hops: initialHops, active: true, triggeredNodes: new Set()});
+        }
+        nodes.push(node);
+    }
+
+    function activateNode(node) {
+        if (node.waves.length === 0 || node.waves.every(wave => wave.radius >= node.maxRadius)) {
+            node.waves.push({radius: 0, hops: initialHops, active: true, triggeredNodes: new Set([node])});
+        }
+    }
+
+    function getWaveColor(hops) {
+        const colors = ['#FF5733', '#FFC300', '#DAF7A6', '#33FF57', '#579FFF', '#CB33FF', '#FF33EC', '#FF5733', '#C70039', '#900C3F'];
+        return colors[hops - 1] || '#333';
+    }
+
+    function draw() {
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        nodes.forEach(node => {
+            node.waves.forEach(wave => {
+                if (wave.active && wave.radius < node.maxRadius && wave.hops > 0) {
+                    wave.radius += node.speed;  // 半徑擴大速度
+                    ctx.beginPath();
+                    ctx.arc(node.x, node.y, wave.radius, 0, 2 * Math.PI);
+                    ctx.strokeStyle = getWaveColor(wave.hops);
+                    ctx.stroke();
+                    ctx.closePath();
+                }
+            });
+            // 繪製節點
+            ctx.fillStyle = 'rgb(108, 232, 153)'; // 節點顏色
+            ctx.beginPath();
+            ctx.arc(node.x, node.y, 10, 0, 2 * Math.PI);
+            ctx.fill();
+            ctx.closePath();
+            // 顯示最大hops值
+            ctx.font = "12px Arial";
+            let maxHops = node.waves.length ? Math.max(...node.waves.map(w => w.hops)) : 0;
+            ctx.fillText(`Hops: ${maxHops}`, node.x + 15, node.y + 5);
+        });
+
+        triggerWaves(); // 觸發波的傳播
+        requestAnimationFrame(draw);
+    }
+
+    function triggerWaves() {
+        nodes.forEach(node => {
+            node.waves.forEach(wave => {
+                if (wave.active && wave.radius < node.maxRadius && wave.hops > 0) {
+                    nodes.forEach(other => {
+                        if (other !== node) {
+                            let dist = Math.sqrt((other.x - node.x) ** 2 + (other.y - node.y) ** 2);
+                            if (dist < wave.radius + 10 && !wave.triggeredNodes.has(other)) {
+                                if (wave.hops > 1) {
+                                    other.waves.push({radius: 0, hops: wave.hops - 1, active: true, triggeredNodes: new Set([...wave.triggeredNodes, other])});
+                                    wave.triggeredNodes.add(other);
+                                }
+                            }
+                        }
+                    });
+                }
+            });
+        });
+    }
+
+    draw();
+</script>
+</body>
+</html>
