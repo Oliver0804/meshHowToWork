@@ -41,6 +41,18 @@
         width: 70px; /* 固定寬度以保持外观一致性 */
         box-shadow: 0px 0px 5px rgba(0,0,0,0.5); /* 添加阴影以增强输入框的立体感 */
     }
+    #tip {
+        position: fixed;
+        right: 20px;
+        bottom: 50px;
+        background-color: #555; /* 深灰色背景 */
+        color: white;
+        padding: 10px;
+        border-radius: 5px;
+        width: 300px; /* 宽度 */
+        box-shadow: 0px 0px 10px rgba(0,0,0,0.5); /* 阴影效果 */
+        font-size: 14px;
+    }
 </style>
 
 </head>
@@ -55,6 +67,12 @@
 <div id="info">
     Instructions: Left-click to create or activate nodes, right-click to remove nodes.<br>
     Author: Oliver | <a href="https://github.com/oliver0804" target="_blank">GitHub</a>
+</div>
+<div id="tip">
+    <strong>Mesh Network Tips:</strong><br>
+    1. If nodes are aligned in a straight line, wave signals can efficiently propagate to the last node.<br>
+    2. Arranging nodes in a triangle shows each node busily relaying the wave.<br>
+    3. Formations like pentagons or more complex shapes cause waves to be busier, increasing channel utilization (ChUtil).
 </div>
 <script>
     const canvas = document.getElementById('canvas');
